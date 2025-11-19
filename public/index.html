@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Anonymous TikTok Viewer (Vercel)</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:1000px;margin:32px auto;padding:20px;background:#0b0b0b;color:#fff;text-align:center}
+    h1{font-size:2rem;margin:0 0 8px}
+    p{color:#bbb;margin-top:0}
+    input{padding:12px;width:68%;max-width:520px;font-size:16px;border-radius:10px;border:1px solid #222;background:#111;color:#fff}
+    button{padding:12px 18px;margin-left:8px;font-size:16px;border-radius:10px;border:none;background:#fe2c55;color:white;cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;margin-top:24px}
+    video{width:100%;border-radius:10px;background:#111}
+    .caption{margin:8px 0;font-size:14px;color:#ddd}
+    a{color:#fe2c55;text-decoration:none;font-weight:bold}
+    .status{grid-column:1/-1;color:#ccc}
+  </style>
+</head>
+<body>
+  <h1>Anonymous TikTok Viewer</h1>
+  <p>No login • No client-side TikTok fetch • Works better on Vercel</p>
+
+  <div>
+    <input id="url" placeholder="Enter @username or full URL" autofocus>
+    <button id="btn">Load</button>
+  </div>
+
+  <div id="out" class="grid"></div>
+
+  <script>
+    const out = document.getElementById('out');
+    document.getElementById('btn').addEventListener('click', load);
+    document.getElementById('url').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') load(); });
+
+    async function load() {
+      let v = document.getElementById('url').value.trim();
+      if (!v) return;
+      // extract username if a URL provided
+      if (v.includes('tiktok.com')) {
+        const match = v.split('/@')[1];
+        if (match) v = match.split('/')[0].split('?')[0];
+      }
+      v = v.replace(/^@/, '');
+      out.innerHTML = `<p class="status">Loading @${v}…</p>`;
+
+      try {
+        const resp = await fetch(`/api/scrape?user=${encodeURIComponent(v)}`);
+        if (!resp.ok) {
+          const txt = await resp.json().catch(()=>null);
+          out.innerHTML = `<p class="status" style="color:#ff8a8a">Error: ${resp.status} ${(txt && txt.error) ? '- ' + txt.error : ''}</p>`;
+          return;
+        }
+        const data = await resp.json();
+        if (!data.items || data.items.length === 0) {
+          out.innerHTML = `<p class="status" style="color:#ff8a8a">No videos found. Maybe the profile is private or TikTok blocked the request.</p>`;
+          console.log('raw data', data);
+          return;
+        }
+
+        out.innerHTML = data.items.map(it => {
+          const play = it.playAddr || it.downloadAddr || '';
+          const dl = it.downloadAddr ? `<a href="${it.downloadAddr}" target="_blank" rel="noreferrer">Download</a>` : '';
+          return `<div>
+            <video controls poster="${escapeHtml(it.cover||'')}" preload="none">
+              ${play ? `<source src="${escapeHtml(play)}" type="video/mp4">` : ''}
+              Your browser doesn't support video.
+            </video>
+            <div class="caption">${escapeHtml(it.desc || 'No caption')}</div>
+            <div>${dl}</div>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        out.innerHTML = `<p class="status" style="color:#ff8a8a">Unexpected error: ${err.message || err}</p>`;
+      }
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+  </script>
+</body>
+</html>
