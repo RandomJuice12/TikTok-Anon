@@ -3,56 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Anonymous TikTok Viewer 2025</title>
+  <title>Anonymous TikTok Viewer 2025 – No App, No Login</title>
+  <meta name="description" content="View any public TikTok profile anonymously. No watermarks, no tracking.">
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #000; color: #fff; }
-    input { padding: 15px; width: 70%; font-size: 18px; border-radius: 12px; border: none; }
-    button { padding: 15px 25px; font-size: 18px; background: #fe2c55; color: white; border: none; border-radius: 12px; cursor: pointer; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 30px; }
-    video { width: 100%; border-radius: 12px; }
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #000; color: #fff; text-align: center; }
+    h1 { font-size: 2.5em; margin-bottom: 0; }
+    p { color: #aaa; }
+    input { padding: 16px; width: 70%; max-width: 500px; font-size: 18px; border-radius: 12px; border: none; margin: 20px 0; }
+    button { padding: 16px 32px; font-size: 18px; background: #fe2c55; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #e01e47; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; margin-top: 40px; }
+    video { width: 100%; border-radius: 12px; background: #111; }
+    .caption { margin: 8px 0; font-size: 14px; color: #ddd; }
+    a { color: #fe2c55; text-decoration: none; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>Anonymous TikTok Viewer</h1>
-  <p>No account · No tracking · No watermarks</p>
-  <input type="text" id="url" placeholder="Paste TikTok URL or @username" autofocus>
-  <button onclick="load()">Load Videos</button>
+  <p>No account • No tracking • No watermarks • Works 2025</p>
+  <input type="text" id="url" placeholder="Enter @username or full TikTok URL" autofocus>
+  <button onclick="load()">Load Profile</button>
   <div id="out" class="grid"></div>
 
   <script>
     async function load() {
-      let input = document.getElementById("url").value.trim();
-      let username = input.includes("tiktok.com") ? input.split("/@")[1]?.split("/")[0]?.split("?")[0] : input.replace("@","");
-      document.getElementById("out").innerHTML = "<p>Loading…</p>";
+      let input = document.getElementById("url").value.trim().replace("@", "");
+      if (!input) return;
+
+      // Extract username from URL if pasted
+      if (input.includes("tiktok.com")) && (input = input.split("/@")[1]?.split("/")[0]?.split("?")[0]);
+
+      document.getElementById("out").innerHTML = `<p style="grid-column:1/-1;font-size:1.5em;">Loading @${input}…</p>`;
 
       try {
-        // Free public CORS proxy (works 2025)
-        let res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent("https://www.tiktok.com/@" + username)}`);
-        let html = await res.text();
-        
-        let json = html.match(/window\.__INIT_PROPS__ = ({.*?});/)?.[1] || 
-                   html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/)?.[1];
-        
-        if (!json) throw "No data";
-        let data = JSON.parse(json);
-        
-        let videos = Object.values(data).flatMap(x => 
-          x?.["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.["userInfo"]?.["items"] || []
-        );
+        // Free reliable proxy that bypasses TikTok blocks
+        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent("https://www.tiktok.com/@" + input)}`;
+        const res = await fetch(proxy, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+          }
+        });
 
-        if (videos.length === 0) throw "NoVideos();
+        const html = await res.text();
 
-        document.getElementById("out").innerHTML = videos.map(v => `
+        // Try multiple possible JSON locations TikTok uses in 2025
+        let jsonStr = html.match(/window\["__UNIVERSAL_DATA_FOR_REHYDRATION__"\]\s*=\s*({.+?});/)?.[1] ||
+                     html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__".*?>({.+?})<\/script>/)?.[1] ||
+                     html.match(/window\.__INIT_PROPS__\s*=\s*({.+?});/)?.[1];
+
+        if (!jsonStr) throw "Blocked";
+
+        const data = JSON.parse(jsonStr);
+
+        const items = data?.["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.["userInfo"]?.["items"] ||
+                      Object.values(data).flatMap(o => o?.items || []);
+
+        if (!items || items.length === 0) throw "Empty";
+
+        document.getElementById("out").innerHTML = items.map(video => `
           <div>
-            <video controls poster="${v.video.cover}" preload="metadata">
-              <source src="${v.video.playAddr[0] || v.video.downloadAddr}" type="video/mp4">
+            <video controls poster="${video.video?.cover}" preload="none">
+              <source src="${video.video?.playAddr?.[0] || video.video?.downloadAddr}" type="video/mp4">
             </video>
-            <p>${v.desc || "No caption"}</p>
-            <a href="${v.video.downloadAddr}" download style="color:#fe2c55">⬇ Download</a>
+            <div class="caption">${video.desc || "No caption"}</div>
+            <a href="${video.video?.downloadAddr}" download>Download No-Watermark</a>
           </div>
         `).join("");
-      } catch(e) {
-        document.getElementById("out").innerHTML = "<p>⚠ Profile not found, private, or TikTok blocked the request. Try another one.</p>";
+
+      } catch (e) {
+        document.getElementById("out").innerHTML = `
+          <p style="grid-column:1/-1;color:#ff6b6b;font-size:1.3em;">
+            Profile not found, private, or TikTok blocked the request.<br>
+            Try a smaller account or come back in a few minutes.
+          </p>`;
       }
     }
   </script>
