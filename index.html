@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anonymous TikTok Viewer 2025</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #000; color: #fff; }
+    input { padding: 15px; width: 70%; font-size: 18px; border-radius: 12px; border: none; }
+    button { padding: 15px 25px; font-size: 18px; background: #fe2c55; color: white; border: none; border-radius: 12px; cursor: pointer; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 30px; }
+    video { width: 100%; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Anonymous TikTok Viewer</h1>
+  <p>No account · No tracking · No watermarks</p>
+  <input type="text" id="url" placeholder="Paste TikTok URL or @username" autofocus>
+  <button onclick="load()">Load Videos</button>
+  <div id="out" class="grid"></div>
+
+  <script>
+    async function load() {
+      let input = document.getElementById("url").value.trim();
+      let username = input.includes("tiktok.com") ? input.split("/@")[1]?.split("/")[0]?.split("?")[0] : input.replace("@","");
+      document.getElementById("out").innerHTML = "<p>Loading…</p>";
+
+      try {
+        // Free public CORS proxy (works 2025)
+        let res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent("https://www.tiktok.com/@" + username)}`);
+        let html = await res.text();
+        
+        let json = html.match(/window\.__INIT_PROPS__ = ({.*?});/)?.[1] || 
+                   html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/)?.[1];
+        
+        if (!json) throw "No data";
+        let data = JSON.parse(json);
+        
+        let videos = Object.values(data).flatMap(x => 
+          x?.["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.["userInfo"]?.["items"] || []
+        );
+
+        if (videos.length === 0) throw "NoVideos();
+
+        document.getElementById("out").innerHTML = videos.map(v => `
+          <div>
+            <video controls poster="${v.video.cover}" preload="metadata">
+              <source src="${v.video.playAddr[0] || v.video.downloadAddr}" type="video/mp4">
+            </video>
+            <p>${v.desc || "No caption"}</p>
+            <a href="${v.video.downloadAddr}" download style="color:#fe2c55">⬇ Download</a>
+          </div>
+        `).join("");
+      } catch(e) {
+        document.getElementById("out").innerHTML = "<p>⚠ Profile not found, private, or TikTok blocked the request. Try another one.</p>";
+      }
+    }
+  </script>
+</body>
+</html>
