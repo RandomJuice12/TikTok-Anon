@@ -1,6 +1,7 @@
 {
   "name": "tiktok-viewer",
   "version": "1.0.0",
+  "type": "module",
   "description": "Anonymous TikTok Viewer on Vercel",
   "main": "api/scrape.js",
   "license": "MIT",
